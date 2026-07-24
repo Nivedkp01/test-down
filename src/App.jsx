@@ -1,18 +1,14 @@
 import { useState } from 'react';
 
+const PUBLIC_URL = 'https://hexnode-ztna-test.s3.ap-south-1.amazonaws.com/blacklist/agressif/agressif.json';
+
 function App() {
   const [contentType, setContentType] = useState('application/json');
   const [status, setStatus] = useState('Enter a content type and click download.');
 
   const handleDownload = async () => {
     try {
-      const response = await fetch('/.netlify/functions/upload?download=true&file=agressif', {
-        method: 'GET',
-        headers: {
-          'Content-Type': contentType,
-        },
-      });
-
+      const response = await fetch(PUBLIC_URL, { method: 'GET' });
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
       }
@@ -44,7 +40,7 @@ function App() {
       <section className="card">
         <h1>Manual Download Test</h1>
         <p className="lead">
-          Enter a content type, then click download. The request will be sent with that content type header.
+          Enter a content type, then click download. The browser will fetch the public JSON file and save it locally.
         </p>
 
         <div className="field">
