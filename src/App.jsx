@@ -9,7 +9,7 @@ function App() {
       const response = await fetch('/.netlify/functions/upload?download=true&file=agressif', {
         method: 'GET',
         headers: {
-          'X-Requested-Content-Type': contentType,
+          'Content-Type': contentType,
         },
       });
 

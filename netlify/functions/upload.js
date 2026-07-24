@@ -121,11 +121,12 @@ export const handler = async function (event) {
         try {
           const response = await fetch(S3_JSON_URL);
           const bodyText = await response.text();
+          const requestedContentType = event.headers?.['content-type'] || event.headers?.['Content-Type'] || 'application/json';
 
           return {
             statusCode: 200,
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': requestedContentType,
               'Content-Disposition': 'attachment; filename="agressif.json"',
               'Cache-Control': 'no-store',
             },
