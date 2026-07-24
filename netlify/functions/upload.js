@@ -1,8 +1,7 @@
 import { promises as fs } from 'fs';
-import os from 'os';
 import path from 'path';
 
-const STORAGE_FILE = path.join(os.tmpdir(), 'test-filedown-last-upload.json');
+const STORAGE_FILE = path.join(process.cwd(), '.netlify', 'uploads', 'last-upload.json');
 
 async function readStoredUpload() {
   try {
