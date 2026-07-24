@@ -9,69 +9,43 @@ const TYPE_OPTIONS = [
 ];
 
 function App() {
-  const [files, setFiles] = useState([]);
-  const [selectedFileId, setSelectedFileId] = useState('');
+  const [status, setStatus] = useState('Preparing download...');
   const [selectedType, setSelectedType] = useState(TYPE_OPTIONS[0].value);
-  const [status, setStatus] = useState('Loading files from server...');
 
   useEffect(() => {
-    const loadFiles = async () => {
+    const triggerDownload = async () => {
       try {
-        const response = await fetch('/.netlify/functions/upload');
-        const payload = await response.json();
-        const availableFiles = payload.files || [];
-        setFiles(availableFiles);
-        if (availableFiles[0]) {
-          setSelectedFileId(availableFiles[0].id);
-          setStatus('Choose a content type and download the file');
-        } else {
-          setStatus('No files available from the server');
-        }
+        const extension = TYPE_OPTIONS.find((option) => option.value === selectedType)?.extension || 'txt';
+        const downloadUrl = `/.netlify/functions/upload?download=1&file=demo&contentType=${encodeURIComponent(selectedType)}`;
+
+        const response = await fetch(downloadUrl, { method: 'GET' });
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `downloaded-file.${extension}`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        setStatus(`Download started as ${selectedType}`);
       } catch (error) {
-        setStatus(`Unable to load files: ${String(error)}`);
+        setStatus(`Download failed: ${String(error)}`);
       }
     };
 
-    loadFiles();
-  }, []);
-
-  const selectedFile = files.find((file) => file.id === selectedFileId) || null;
-
-  const onDownload = () => {
-    if (!selectedFile) return;
-
-    const extension = TYPE_OPTIONS.find((option) => option.value === selectedType)?.extension || 'txt';
-    const downloadUrl = `/.netlify/functions/upload?download=1&file=${encodeURIComponent(selectedFile.id)}&contentType=${encodeURIComponent(selectedType)}`;
-
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `${selectedFile.name.replace(/\.[^/.]+$/, '')}.${extension}`;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setStatus(`Downloading ${selectedFile.name} as ${selectedType}`);
-  };
+    triggerDownload();
+  }, [selectedType]);
 
   return (
     <main className="app-shell">
       <section className="card">
-        <h1>Server File Download Test</h1>
+        <h1>Auto Download Test</h1>
         <p className="lead">
-          The server lists a file, and you can choose the response content type before downloading it to your device.
+          Opening this page automatically downloads a file from the server using the selected content type.
         </p>
-
-        <div className="field">
-          <span>Select file</span>
-          <select value={selectedFileId} onChange={(event) => setSelectedFileId(event.target.value)}>
-            {files.map((file) => (
-              <option key={file.id} value={file.id}>
-                {file.name}
-              </option>
-            ))}
-          </select>
-        </div>
 
         <div className="field">
           <span>Select content type</span>
@@ -82,19 +56,6 @@ function App() {
               </option>
             ))}
           </select>
-        </div>
-
-        {selectedFile && (
-          <div className="status">
-            <strong>Selected file:</strong> {selectedFile.name}<br />
-            <strong>Description:</strong> {selectedFile.description}
-          </div>
-        )}
-
-        <div className="actions">
-          <button type="button" onClick={onDownload} disabled={!selectedFile}>
-            Download to device
-          </button>
         </div>
 
         <div className="upload-status done">
