@@ -1,5 +1,7 @@
 let lastUpload = null;
 
+const S3_JSON_URL = 'https://hexnode-ztna-test.s3.ap-south-1.amazonaws.com/blacklist/agressif/agressif.json';
+
 const AVAILABLE_FILES = [
   {
     id: 'demo',
@@ -115,6 +117,28 @@ export const handler = async function (event) {
 
     if (params.download === '1' || params.download === 'true') {
       const fileId = params.file || 'demo';
+      if (fileId === 'agressif') {
+        try {
+          const response = await fetch(S3_JSON_URL);
+          const bodyText = await response.text();
+
+          return {
+            statusCode: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Disposition': 'attachment; filename="agressif.json"',
+              'Cache-Control': 'no-store',
+            },
+            body: bodyText,
+          };
+        } catch (error) {
+          return {
+            statusCode: 502,
+            body: JSON.stringify({ message: 'Failed to fetch S3 content', error: String(error) }),
+          };
+        }
+      }
+
       const file = AVAILABLE_FILES.find((entry) => entry.id === fileId) || AVAILABLE_FILES[0];
       const contentType = params.contentType || 'text/plain';
       const body = formatContent(file, contentType);

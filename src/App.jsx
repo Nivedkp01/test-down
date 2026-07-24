@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 
-const S3_URL = 'https://hexnode-ztna-test.s3.ap-south-1.amazonaws.com/blacklist/agressif/agressif.json';
-
 function App() {
   const [status, setStatus] = useState('Preparing download...');
 
   useEffect(() => {
     const triggerDownload = async () => {
       try {
-        const response = await fetch(S3_URL, { method: 'GET' });
+        const response = await fetch('/.netlify/functions/upload?download=true&file=agressif', { method: 'GET' });
         if (!response.ok) {
-          throw new Error(`S3 returned ${response.status}`);
+          throw new Error(`Server returned ${response.status}`);
         }
 
         const text = await response.text();
@@ -29,7 +27,7 @@ function App() {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
 
-        setStatus('Downloaded agressif.json from S3');
+        setStatus('Downloaded agressif.json from the server proxy');
       } catch (error) {
         setStatus(`Download failed: ${String(error)}`);
       }
@@ -41,9 +39,9 @@ function App() {
   return (
     <main className="app-shell">
       <section className="card">
-        <h1>S3 JSON Download Test</h1>
+        <h1>Server Proxy Download Test</h1>
         <p className="lead">
-          Opening this page downloads the JSON file from the provided S3 URL.
+          Opening this page downloads the JSON file through the server-side proxy.
         </p>
 
         <div className="upload-status done">
