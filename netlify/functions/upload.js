@@ -1,11 +1,65 @@
 let lastUpload = null;
 
+const AVAILABLE_FILES = [
+  {
+    id: 'demo',
+    name: 'demo.txt',
+    description: 'A sample text file hosted by the server.',
+    content: 'This content is served by the server and can be downloaded with a selected content type.',
+  },
+  {
+    id: 'notes',
+    name: 'notes.md',
+    description: 'A markdown file that can be downloaded as HTML or JSON.',
+    content: '# Server file\n\nThis file is listed by the server and can be downloaded in different formats.',
+  },
+];
+
 function readStoredUpload() {
   return lastUpload;
 }
 
 function writeStoredUpload(upload) {
   lastUpload = upload;
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatContent(file, contentType) {
+  if (!file) return '';
+
+  switch (contentType) {
+    case 'application/json':
+      return JSON.stringify({ name: file.name, description: file.description, content: file.content }, null, 2);
+    case 'text/html':
+      return `<h1>${escapeHtml(file.name)}</h1><p>${escapeHtml(file.content)}</p>`;
+    case 'text/markdown':
+      return `# ${file.name}\n\n${file.content}`;
+    case 'application/javascript':
+      return `console.log('Downloaded from server');\nconst payload = ${JSON.stringify(file.content)};`;
+    default:
+      return file.content;
+  }
+}
+
+function getSuggestedFileName(file, contentType) {
+  const extensionMap = {
+    'text/plain': 'txt',
+    'text/markdown': 'md',
+    'text/html': 'html',
+    'application/json': 'json',
+    'application/javascript': 'js',
+  };
+
+  const ext = extensionMap[contentType] || 'txt';
+  return `${file.name.replace(/\.[^/.]+$/, '')}.${ext}`;
 }
 
 function parseMultipartFormData(event) {
@@ -57,24 +111,30 @@ function parseMultipartFormData(event) {
 
 export const handler = async function (event) {
   if (event.httpMethod === 'GET') {
-    const storedUpload = readStoredUpload();
-    if (!storedUpload) {
+    const params = event.queryStringParameters || {};
+
+    if (params.download === '1' || params.download === 'true') {
+      const fileId = params.file || 'demo';
+      const file = AVAILABLE_FILES.find((entry) => entry.id === fileId) || AVAILABLE_FILES[0];
+      const contentType = params.contentType || 'text/plain';
+      const body = formatContent(file, contentType);
+
       return {
-        statusCode: 404,
-        body: JSON.stringify({ message: 'No uploaded file stored on the server yet.' }),
+        statusCode: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Disposition': `attachment; filename="${getSuggestedFileName(file, contentType)}"`,
+          'Cache-Control': 'no-store',
+        },
+        body,
       };
     }
 
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: 'Download ready',
-        file: {
-          name: storedUpload.name,
-          type: storedUpload.type,
-          contentBase64: storedUpload.content,
-          contentLength: storedUpload.content.length,
-        },
+        message: 'Server file list ready',
+        files: AVAILABLE_FILES,
       }),
     };
   }
