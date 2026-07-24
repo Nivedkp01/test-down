@@ -1,22 +1,11 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+let lastUpload = null;
 
-const STORAGE_FILE = path.join(process.cwd(), '.netlify', 'uploads', 'last-upload.json');
-
-async function readStoredUpload() {
-  try {
-    const raw = await fs.readFile(STORAGE_FILE, 'utf8');
-    return JSON.parse(raw);
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return null;
-    }
-    throw error;
-  }
+function readStoredUpload() {
+  return lastUpload;
 }
 
-async function writeStoredUpload(upload) {
-  await fs.writeFile(STORAGE_FILE, JSON.stringify(upload, null, 2), 'utf8');
+function writeStoredUpload(upload) {
+  lastUpload = upload;
 }
 
 function parseMultipartFormData(event) {
@@ -68,8 +57,8 @@ function parseMultipartFormData(event) {
 
 export const handler = async function (event) {
   if (event.httpMethod === 'GET') {
-    const lastUpload = await readStoredUpload();
-    if (!lastUpload) {
+    const storedUpload = readStoredUpload();
+    if (!storedUpload) {
       return {
         statusCode: 404,
         body: JSON.stringify({ message: 'No uploaded file stored on the server yet.' }),
@@ -81,10 +70,10 @@ export const handler = async function (event) {
       body: JSON.stringify({
         message: 'Download ready',
         file: {
-          name: lastUpload.name,
-          type: lastUpload.type,
-          contentBase64: lastUpload.content,
-          contentLength: lastUpload.content.length,
+          name: storedUpload.name,
+          type: storedUpload.type,
+          contentBase64: storedUpload.content,
+          contentLength: storedUpload.content.length,
         },
       }),
     };
@@ -123,13 +112,13 @@ export const handler = async function (event) {
     };
   }
 
-  const lastUpload = {
+  const uploadRecord = {
     name: fileName,
     type: type || 'application/octet-stream',
     content: uploadedContent,
   };
 
-  await writeStoredUpload(lastUpload);
+  writeStoredUpload(uploadRecord);
 
   const signature = uploadedContent.slice(0, 10);
   const detected = [];
