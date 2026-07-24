@@ -1,4 +1,24 @@
-let lastUpload = null;
+import { promises as fs } from 'fs';
+import os from 'os';
+import path from 'path';
+
+const STORAGE_FILE = path.join(os.tmpdir(), 'test-filedown-last-upload.json');
+
+async function readStoredUpload() {
+  try {
+    const raw = await fs.readFile(STORAGE_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function writeStoredUpload(upload) {
+  await fs.writeFile(STORAGE_FILE, JSON.stringify(upload, null, 2), 'utf8');
+}
 
 function parseMultipartFormData(event) {
   const contentType = event.headers?.['content-type'] || event.headers?.['Content-Type'] || '';
@@ -49,6 +69,7 @@ function parseMultipartFormData(event) {
 
 export const handler = async function (event) {
   if (event.httpMethod === 'GET') {
+    const lastUpload = await readStoredUpload();
     if (!lastUpload) {
       return {
         statusCode: 404,
@@ -103,11 +124,13 @@ export const handler = async function (event) {
     };
   }
 
-  lastUpload = {
+  const lastUpload = {
     name: fileName,
     type: type || 'application/octet-stream',
     content: uploadedContent,
   };
+
+  await writeStoredUpload(lastUpload);
 
   const signature = uploadedContent.slice(0, 10);
   const detected = [];
