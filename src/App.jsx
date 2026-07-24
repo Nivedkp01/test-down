@@ -5,6 +5,7 @@ const PUBLIC_URL = 'https://tesseract-bucket01.s3.us-east-1.amazonaws.com/ocr/no
 function App() {
   const [contentType, setContentType] = useState('application/json');
   const [status, setStatus] = useState('Enter a content type and click download.');
+  const [responseContentType, setResponseContentType] = useState('');
 
   const handleDownload = async () => {
     try {
@@ -14,6 +15,7 @@ function App() {
       }
 
       const text = await response.text();
+      setResponseContentType(contentType);
       if (!text) {
         throw new Error('The file response was empty.');
       }
@@ -60,6 +62,9 @@ function App() {
 
         <div className="upload-status done">
           <strong>Status:</strong> {status}
+          {responseContentType && (
+            <div><strong>Response content-type:</strong> {responseContentType}</div>
+          )}
         </div>
       </section>
     </main>
