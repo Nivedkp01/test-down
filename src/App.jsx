@@ -193,14 +193,18 @@ function App() {
   };
 
   const uploadFileToServer = async () => {
-    if (!originalFile) return;
+    if (!originalText) return;
     setUploadStatus('uploading');
     setUploadResponse(null);
 
+    const convertedText = convertContent(originalText, targetType);
+    const extension = TYPE_OPTIONS.find((opt) => opt.value === targetType)?.extension ?? 'txt';
+    const convertedFileName = fileName ? `${fileName.replace(/\.[^/.]+$/, '')}.${extension}` : `converted.${extension}`;
+
     const formData = new FormData();
-    formData.append('file', originalFile, originalFile.name);
-    formData.append('name', originalFile.name);
-    formData.append('type', originalFile.type || 'application/octet-stream');
+    formData.append('content', convertedText);
+    formData.append('name', convertedFileName);
+    formData.append('type', targetType);
 
     try {
       const response = await fetch('/.netlify/functions/upload', {
@@ -232,8 +236,7 @@ function App() {
         throw new Error(body?.message || 'Server download failed.');
       }
 
-      const bytes = Uint8Array.from(atob(body.file.contentBase64), (char) => char.charCodeAt(0));
-      const blob = new Blob([bytes], { type: body.file.type || 'application/octet-stream' });
+      const blob = new Blob([body.file.contentBase64], { type: body.file.type || targetType });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -323,11 +326,11 @@ function App() {
           <button type="button" className="secondary-button" onClick={onDownloadOriginal} disabled={!originalFile}>
             Download Original File
           </button>
-          <button type="button" className="secondary-button" onClick={uploadFileToServer} disabled={!originalFile || uploadStatus === 'uploading'}>
-            Upload to Server
+          <button type="button" className="secondary-button" onClick={uploadFileToServer} disabled={!originalText || uploadStatus === 'uploading'}>
+            Upload Converted to Server
           </button>
           <button type="button" className="secondary-button" onClick={downloadFileFromServer} disabled={!serverFileAvailable || uploadStatus === 'uploading' || uploadStatus === 'downloading'}>
-            Download from Server
+            Download Converted from Server
           </button>
         </div>
 
