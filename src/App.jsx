@@ -16,10 +16,16 @@ function App() {
     const triggerDownload = async () => {
       try {
         const extension = TYPE_OPTIONS.find((option) => option.value === selectedType)?.extension || 'txt';
-        const downloadUrl = `/.netlify/functions/upload?download=1&file=demo&contentType=${encodeURIComponent(selectedType)}`;
+        const downloadUrl = `/.netlify/functions/upload?download=true&file=demo&contentType=${encodeURIComponent(selectedType)}`;
 
         const response = await fetch(downloadUrl, { method: 'GET' });
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
         const blob = await response.blob();
+        if (!blob.size) {
+          throw new Error('The file response was empty.');
+        }
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
