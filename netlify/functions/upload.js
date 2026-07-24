@@ -1,6 +1,6 @@
 let lastUpload = null;
 
-const S3_JSON_URL = 'https://hexnode-ztna-test.s3.ap-south-1.amazonaws.com/blacklist/agressif/agressif.json';
+const S3_TEXT_URL = 'https://tesseract-bucket01.s3.us-east-1.amazonaws.com/ocr/note%20%282%29%20%281%29.txt';
 
 const AVAILABLE_FILES = [
   {
@@ -119,7 +119,7 @@ export const handler = async function (event) {
       const fileId = params.file || 'demo';
       if (fileId === 'agressif') {
         try {
-          const response = await fetch(S3_JSON_URL);
+          const response = await fetch(S3_TEXT_URL);
           const bodyText = await response.text();
           const requestedContentType = event.headers?.['content-type'] || event.headers?.['Content-Type'] || 'application/json';
 
@@ -127,7 +127,7 @@ export const handler = async function (event) {
             statusCode: 200,
             headers: {
               'Content-Type': requestedContentType,
-              'Content-Disposition': 'attachment; filename="agressif.json"',
+              'Content-Disposition': 'attachment; filename="agressif.txt"',
               'Cache-Control': 'no-store',
             },
             body: bodyText,

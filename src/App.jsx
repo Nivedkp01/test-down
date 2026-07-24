@@ -1,7 +1,5 @@
 import { useState } from 'react';
 
-const PUBLIC_URL = 'https://tesseract-bucket01.s3.us-east-1.amazonaws.com/ocr/note%20%282%29%20%281%29.txt';
-
 function App() {
   const [contentType, setContentType] = useState('application/json');
   const [status, setStatus] = useState('Enter a content type and click download.');
@@ -9,7 +7,12 @@ function App() {
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(PUBLIC_URL, { method: 'GET' });
+      const response = await fetch('/.netlify/functions/upload?download=true&file=agressif', {
+        method: 'GET',
+        headers: {
+          'Content-Type': contentType,
+        },
+      });
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
       }
