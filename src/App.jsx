@@ -193,36 +193,23 @@ function App() {
     setUploadStatus('uploading');
     setUploadResponse(null);
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const arrayBuffer = event.target?.result;
-      if (!(arrayBuffer instanceof ArrayBuffer)) {
-        setUploadStatus('error');
-        setUploadResponse('Upload failed: unreadable file.');
-        return;
-      }
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      try {
-        const response = await fetch('/.netlify/functions/upload', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: originalFile.name,
-            type: originalFile.type || 'application/octet-stream',
-            content: base64,
-          }),
-        });
-        const body = await response.json();
-        setUploadStatus(response.ok ? 'done' : 'error');
-        setUploadResponse(body);
-      } catch (error) {
-        setUploadStatus('error');
-        setUploadResponse({ message: String(error) });
-      }
-    };
-    reader.readAsArrayBuffer(originalFile);
+    const formData = new FormData();
+    formData.append('file', originalFile, originalFile.name);
+    formData.append('name', originalFile.name);
+    formData.append('type', originalFile.type || 'application/octet-stream');
+
+    try {
+      const response = await fetch('/.netlify/functions/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const body = await response.json().catch(() => ({ message: 'Upload completed' }));
+      setUploadStatus(response.ok ? 'done' : 'error');
+      setUploadResponse(body);
+    } catch (error) {
+      setUploadStatus('error');
+      setUploadResponse({ message: String(error) });
+    }
   };
 
   const onGenerateSpoofFile = (spoofCase) => {
