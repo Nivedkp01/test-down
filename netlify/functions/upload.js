@@ -1,13 +1,5 @@
 let lastUpload = null;
 
-function trimTrailingCrlf(buffer) {
-  let end = buffer.length;
-  while (end > 0 && (buffer[end - 1] === 0x0d || buffer[end - 1] === 0x0a)) {
-    end -= 1;
-  }
-  return buffer.subarray(0, end);
-}
-
 function parseMultipartFormData(event) {
   const contentType = event.headers?.['content-type'] || event.headers?.['Content-Type'] || '';
   const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
@@ -20,24 +12,22 @@ function parseMultipartFormData(event) {
   const rawBody = event.isBase64Encoded
     ? Buffer.from(event.body || '', 'base64')
     : Buffer.from(event.body || '', 'utf8');
-  const boundaryBuffer = Buffer.from(`--${boundary}`);
-  const parts = [];
-  let searchStart = 0;
+  const bodyText = rawBody.toString('utf8');
+  const boundaryMarker = `--${boundary}`;
+  const parts = bodyText.split(boundaryMarker);
+  const payload = {};
 
-  while (searchStart < rawBody.length) {
-    const boundaryIndex = rawBody.indexOf(boundaryBuffer, searchStart);
-    if (boundaryIndex === -1) break;
+  for (const rawPart of parts) {
+    const part = rawPart.replace(/^\r?\n/, '').replace(/\r?\n$/, '');
+    if (!part || part === '--') continue;
+    if (part.startsWith('--')) continue;
 
-    const sectionStart = boundaryIndex + boundaryBuffer.length;
-    const nextBoundary = rawBody.indexOf(boundaryBuffer, sectionStart);
-    const sectionEnd = nextBoundary === -1 ? rawBody.length : nextBoundary;
-    const sectionBuffer = rawBody.subarray(sectionStart, sectionEnd);
+    const separatorIndex = part.indexOf('\r\n\r\n');
+    if (separatorIndex < 0) continue;
 
-    const separatorIndex = sectionBuffer.indexOf(Buffer.from('\r\n\r\n'));
-    const headersBuffer = separatorIndex >= 0 ? sectionBuffer.subarray(0, separatorIndex) : Buffer.alloc(0);
-    const bodyBuffer = separatorIndex >= 0 ? trimTrailingCrlf(sectionBuffer.subarray(separatorIndex + 4)) : trimTrailingCrlf(sectionBuffer);
-
-    const headers = headersBuffer.toString('utf8').split('\r\n').reduce((acc, line) => {
+    const headersText = part.slice(0, separatorIndex);
+    const bodyTextChunk = part.slice(separatorIndex + 4).replace(/\r\n$/, '');
+    const headers = headersText.split('\r\n').reduce((acc, line) => {
       const separator = line.indexOf(':');
       if (separator > 0) {
         acc[line.slice(0, separator).trim().toLowerCase()] = line.slice(separator + 1).trim();
@@ -45,20 +35,13 @@ function parseMultipartFormData(event) {
       return acc;
     }, {});
 
-    parts.push({ headers, bodyBuffer });
-    searchStart = sectionEnd;
-  }
-
-  const payload = {};
-  for (const part of parts) {
-    const disposition = part.headers['content-disposition'] || '';
+    const disposition = headers['content-disposition'] || '';
     const nameMatch = disposition.match(/name="([^"]+)"/i);
-    const fileNameMatch = disposition.match(/filename="([^"]*)"/i);
     const name = nameMatch?.[1];
 
     if (!name) continue;
 
-    payload[name] = fileNameMatch ? part.bodyBuffer.toString('base64') : part.bodyBuffer.toString('utf8');
+    payload[name] = bodyTextChunk;
   }
 
   return payload;

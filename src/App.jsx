@@ -211,10 +211,16 @@ function App() {
         method: 'POST',
         body: formData,
       });
-      const body = await response.json().catch(() => ({ message: 'Upload completed' }));
+      const responseText = await response.text();
+      let body = { message: 'Upload completed' };
+      try {
+        body = responseText ? JSON.parse(responseText) : { message: 'Upload completed' };
+      } catch {
+        body = { message: responseText || 'Upload completed' };
+      }
       setUploadStatus(response.ok ? 'done' : 'error');
       setUploadResponse(body);
-      setServerFileAvailable(response.ok);
+      setServerFileAvailable(response.ok && Boolean(body?.file?.contentBase64 || body?.file?.content));
     } catch (error) {
       setUploadStatus('error');
       setUploadResponse({ message: String(error) });
@@ -230,13 +236,20 @@ function App() {
       const response = await fetch('/.netlify/functions/upload', {
         method: 'GET',
       });
-      const body = await response.json();
+      const responseText = await response.text();
+      let body = {};
+      try {
+        body = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(responseText || 'Server download failed.');
+      }
 
-      if (!response.ok || !body?.file?.contentBase64) {
+      const content = body?.file?.contentBase64 || body?.file?.content || '';
+      if (!response.ok || !content) {
         throw new Error(body?.message || 'Server download failed.');
       }
 
-      const blob = new Blob([body.file.contentBase64], { type: body.file.type || targetType });
+      const blob = new Blob([content], { type: body.file.type || targetType });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
