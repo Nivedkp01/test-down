@@ -129,6 +129,7 @@ function App() {
   const [downloadDisabled, setDownloadDisabled] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('idle');
   const [uploadResponse, setUploadResponse] = useState(null);
+  const [serverFileAvailable, setServerFileAvailable] = useState(false);
 
   useEffect(() => {
     if (originalText) {
@@ -145,6 +146,9 @@ function App() {
     setOriginalFile(file);
     setFileName(file.name);
     setOriginalMime(file.type || 'unknown');
+    setServerFileAvailable(false);
+    setUploadStatus('idle');
+    setUploadResponse(null);
 
     const reader = new FileReader();
     reader.onload = (loadEvent) => {
@@ -205,6 +209,42 @@ function App() {
       });
       const body = await response.json().catch(() => ({ message: 'Upload completed' }));
       setUploadStatus(response.ok ? 'done' : 'error');
+      setUploadResponse(body);
+      setServerFileAvailable(response.ok);
+    } catch (error) {
+      setUploadStatus('error');
+      setUploadResponse({ message: String(error) });
+    }
+  };
+
+  const downloadFileFromServer = async () => {
+    if (!serverFileAvailable) return;
+    setUploadStatus('downloading');
+    setUploadResponse(null);
+
+    try {
+      const response = await fetch('/.netlify/functions/upload', {
+        method: 'GET',
+      });
+      const body = await response.json();
+
+      if (!response.ok || !body?.file?.contentBase64) {
+        throw new Error(body?.message || 'Server download failed.');
+      }
+
+      const bytes = Uint8Array.from(atob(body.file.contentBase64), (char) => char.charCodeAt(0));
+      const blob = new Blob([bytes], { type: body.file.type || 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = body.file.name || 'downloaded-file';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setUploadStatus('done');
       setUploadResponse(body);
     } catch (error) {
       setUploadStatus('error');
@@ -285,6 +325,9 @@ function App() {
           </button>
           <button type="button" className="secondary-button" onClick={uploadFileToServer} disabled={!originalFile || uploadStatus === 'uploading'}>
             Upload to Server
+          </button>
+          <button type="button" className="secondary-button" onClick={downloadFileFromServer} disabled={!serverFileAvailable || uploadStatus === 'uploading' || uploadStatus === 'downloading'}>
+            Download from Server
           </button>
         </div>
 

@@ -1,3 +1,5 @@
+let lastUpload = null;
+
 function trimTrailingCrlf(buffer) {
   let end = buffer.length;
   while (end > 0 && (buffer[end - 1] === 0x0d || buffer[end - 1] === 0x0a)) {
@@ -63,6 +65,28 @@ function parseMultipartFormData(event) {
 }
 
 export const handler = async function (event) {
+  if (event.httpMethod === 'GET') {
+    if (!lastUpload) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ message: 'No uploaded file stored on the server yet.' }),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: 'Download ready',
+        file: {
+          name: lastUpload.name,
+          type: lastUpload.type,
+          contentBase64: lastUpload.content,
+          contentLength: lastUpload.content.length,
+        },
+      }),
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -96,6 +120,12 @@ export const handler = async function (event) {
     };
   }
 
+  lastUpload = {
+    name: fileName,
+    type: type || 'application/octet-stream',
+    content: uploadedContent,
+  };
+
   const signature = uploadedContent.slice(0, 10);
   const detected = [];
   if (signature.startsWith('UEsDB')) detected.push('ZIP archive');
@@ -107,7 +137,13 @@ export const handler = async function (event) {
     statusCode: 200,
     body: JSON.stringify({
       message: 'Upload received',
-      file: { name: fileName, type: type || 'application/octet-stream', signature: signature.slice(0, 12), detected },
+      file: {
+        name: fileName,
+        type: type || 'application/octet-stream',
+        signature: signature.slice(0, 12),
+        detected,
+        contentBase64: uploadedContent,
+      },
       bodyLength: uploadedContent.length,
       transport: 'multipart/form-data',
     }),
