@@ -1,68 +1,50 @@
 import { useEffect, useState } from 'react';
 
-const TYPE_OPTIONS = [
-  { label: 'Plain Text', value: 'text/plain', extension: 'txt' },
-  { label: 'Markdown', value: 'text/markdown', extension: 'md' },
-  { label: 'HTML', value: 'text/html', extension: 'html' },
-  { label: 'JSON', value: 'application/json', extension: 'json' },
-  { label: 'JavaScript', value: 'application/javascript', extension: 'js' },
-];
+const S3_URL = 'https://hexnode-ztna-test.s3.ap-south-1.amazonaws.com/blacklist/agressif/agressif.json';
 
 function App() {
   const [status, setStatus] = useState('Preparing download...');
-  const [selectedType, setSelectedType] = useState(TYPE_OPTIONS[0].value);
 
   useEffect(() => {
     const triggerDownload = async () => {
       try {
-        const extension = TYPE_OPTIONS.find((option) => option.value === selectedType)?.extension || 'txt';
-        const downloadUrl = `/.netlify/functions/upload?download=true&file=demo&contentType=${encodeURIComponent(selectedType)}`;
-
-        const response = await fetch(downloadUrl, { method: 'GET' });
+        const response = await fetch(S3_URL, { method: 'GET' });
         if (!response.ok) {
-          throw new Error(`Server returned ${response.status}`);
+          throw new Error(`S3 returned ${response.status}`);
         }
-        const blob = await response.blob();
-        if (!blob.size) {
+
+        const text = await response.text();
+        if (!text) {
           throw new Error('The file response was empty.');
         }
+
+        const blob = new Blob([text], { type: 'application/json' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `downloaded-file.${extension}`;
+        link.download = 'agressif.json';
         link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
 
-        setStatus(`Download started as ${selectedType}`);
+        setStatus('Downloaded agressif.json from S3');
       } catch (error) {
         setStatus(`Download failed: ${String(error)}`);
       }
     };
 
     triggerDownload();
-  }, [selectedType]);
+  }, []);
 
   return (
     <main className="app-shell">
       <section className="card">
-        <h1>Auto Download Test</h1>
+        <h1>S3 JSON Download Test</h1>
         <p className="lead">
-          Opening this page automatically downloads a file from the server using the selected content type.
+          Opening this page downloads the JSON file from the provided S3 URL.
         </p>
-
-        <div className="field">
-          <span>Select content type</span>
-          <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
-            {TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
 
         <div className="upload-status done">
           <strong>Status:</strong> {status}
