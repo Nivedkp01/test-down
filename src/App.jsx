@@ -17,24 +17,29 @@ function App() {
         throw new Error(`Server returned ${response.status}`);
       }
 
-      const text = await response.text();
-      setResponseContentType(contentType);
-      if (!text) {
+      const arrayBuffer = await response.arrayBuffer();
+      const responseContentType = response.headers.get('content-type') || 'application/octet-stream';
+      const contentDisposition = response.headers.get('content-disposition') || '';
+      const filenameMatch = contentDisposition.match(/filename\s*=\s*"?([^";]+)"?/i);
+      const downloadName = filenameMatch?.[1] || 'download.bin';
+
+      setResponseContentType(responseContentType);
+      if (!arrayBuffer.byteLength) {
         throw new Error('The file response was empty.');
       }
 
-      const blob = new Blob([text], { type: contentType });
+      const blob = new Blob([arrayBuffer], { type: responseContentType });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `agressif.${contentType.includes('json') ? 'json' : 'txt'}`;
+      link.download = downloadName;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      setStatus(`Downloaded using content type: ${contentType}`);
+      setStatus(`Downloaded using content type: ${responseContentType}`);
     } catch (error) {
       setStatus(`Download failed: ${String(error)}`);
     }
