@@ -119,18 +119,23 @@ export const handler = async function (event) {
       const fileId = params.file || 'demo';
       if (fileId === 'agressif') {
         try {
-          const response = await fetch(S3_TEXT_URL);
-          const bodyText = await response.text();
-          const requestedContentType = event.headers?.['content-type'] || event.headers?.['Content-Type'] || 'application/json';
+          const requestUrl = `${S3_TEXT_URL}${S3_TEXT_URL.includes('?') ? '&' : '?'}_=${Date.now()}`;
+          const response = await fetch(requestUrl);
+          const arrayBuffer = await response.arrayBuffer();
+          const bodyBuffer = Buffer.from(arrayBuffer);
+          const responseContentType = response.headers.get('content-type') || event.headers?.['content-type'] || event.headers?.['Content-Type'] || 'application/octet-stream';
+          const fileName = response.url.split('/').pop() || 'download.bin';
 
           return {
             statusCode: 200,
             headers: {
-              'Content-Type': requestedContentType,
-              'Content-Disposition': 'attachment; filename="agressif.txt"',
-              'Cache-Control': 'no-store',
+              'Content-Type': responseContentType,
+              'Content-Disposition': `attachment; filename="${fileName}"`,
+              'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+              'Pragma': 'no-cache',
             },
-            body: bodyText,
+            body: bodyBuffer.toString('base64'),
+            isBase64Encoded: true,
           };
         } catch (error) {
           return {
