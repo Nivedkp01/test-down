@@ -1,6 +1,6 @@
 let lastUpload = null;
 
-const S3_TEXT_URL = 'https://tesseract-bucket01.s3.us-east-1.amazonaws.com/ocr/3t2yhtq2xudyra7z+(1).zip';
+const S3_TEXT_URL = 'https://tesseract-bucket01.s3.us-east-1.amazonaws.com/ocr/IRCTC+Next+Generation+eTicketing+System.pdf';
 
 const AVAILABLE_FILES = [
   {
