@@ -123,8 +123,10 @@ export const handler = async function (event) {
           const response = await fetch(requestUrl);
           const arrayBuffer = await response.arrayBuffer();
           const bodyBuffer = Buffer.from(arrayBuffer);
-          const responseContentType = response.headers.get('content-type') || event.headers?.['content-type'] || event.headers?.['Content-Type'] || 'application/octet-stream';
-          const fileName = response.url.split('/').pop() || 'download.bin';
+          const requestedContentType = params.contentType || event.headers?.['content-type'] || event.headers?.['Content-Type'] || 'application/json';
+          const responseContentType = requestedContentType || 'application/octet-stream';
+          const parsedUrl = new URL(requestUrl);
+          const fileName = parsedUrl.pathname.split('/').pop() || 'download.bin';
 
           return {
             statusCode: 200,

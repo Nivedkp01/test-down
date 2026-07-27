@@ -7,7 +7,7 @@ function App() {
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(`/.netlify/functions/upload?download=true&file=agressif&t=${Date.now()}`, {
+      const response = await fetch(`/.netlify/functions/upload?download=true&file=agressif&contentType=${encodeURIComponent(contentType)}&t=${Date.now()}`, {
         method: 'GET',
         headers: {
           'Content-Type': contentType,
