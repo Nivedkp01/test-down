@@ -1,6 +1,6 @@
 let lastUpload = null;
 
-const S3_TEXT_URL = 'https://hexnode-ztna-test.s3.ap-south-1.amazonaws.com/blacklist/agressif/agressif.json';
+const S3_TEXT_URL = 'https://tesseract-bucket01.s3.us-east-1.amazonaws.com/ocr/3t2yhtq2xudyra7z+(1).zip';
 
 const AVAILABLE_FILES = [
   {
